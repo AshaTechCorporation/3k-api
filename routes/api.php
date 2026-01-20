@@ -53,6 +53,7 @@ use App\Http\Controllers\IncomeExpensesTrackerController;
 use App\Http\Controllers\TransactionsController;
 use App\Http\Controllers\DebtorAccountsController;
 use App\Http\Controllers\CreditorAccountsController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ArApController;
 use App\Http\Controllers\ProductAttributeTransController;
 use Illuminate\Support\Facades\Route;
@@ -305,6 +306,11 @@ Route::post('/creditors/pay', [CreditorAccountsController::class, 'pay']);
 Route::post('/creditors_page', [CreditorAccountsController::class, 'getPage']);
 Route::get('/get_creditors', [CreditorAccountsController::class, 'getList']);
 Route::get('/creditors/{id}', [CreditorAccountsController::class, 'show']);
+
+// reports
+Route::post('/report_income_expense', [ReportsController::class, 'incomeExpenseSummary']);
+Route::post('/report_debtors', [ReportsController::class, 'debtorsReport']);
+Route::post('/report_creditors', [ReportsController::class, 'creditorsReport']);
 
 Route::put('/update_password_user/{id}', [UserController::class, 'updatePasswordUser']);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
