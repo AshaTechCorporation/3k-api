@@ -285,8 +285,11 @@ class DebtorAccountsController extends Controller
     public function payBulk(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'debtor_account_ids' => 'required|array|min:1',
+            'debtor_account_ids' => 'nullable|array|min:1',
             'debtor_account_ids.*' => 'required|integer|exists:debtor_accounts,id',
+            'payments' => 'nullable|array|min:1',
+            'payments.*.debtor_account_id' => 'required_with:payments|integer|exists:debtor_accounts,id',
+            'payments.*.interest_paid' => 'nullable|numeric|min:0',
             'payment_date' => 'required|date',
             'payment_method' => 'required|in:cash,transfer',
         ]);
@@ -298,9 +301,19 @@ class DebtorAccountsController extends Controller
         DB::beginTransaction();
 
         try {
+            $hasPayments = $request->filled('payments');
+            $hasAccountIds = $request->filled('debtor_account_ids');
+
+            if (!$hasPayments && !$hasAccountIds) {
+                return $this->returnErrorData('กรุณาระบุรายการที่ต้องการชำระ', 400);
+            }
+
             $results = [];
 
-            foreach ($request->debtor_account_ids as $accountId) {
+            $targets = $hasPayments ? $request->payments : $request->debtor_account_ids;
+
+            foreach ($targets as $target) {
+                $accountId = $hasPayments ? $target['debtor_account_id'] : $target;
                 $account = DebtorAccount::with('payments')->find($accountId);
                 if (!$account) {
                     throw new \RuntimeException('ไม่พบข้อมูลลูกหนี้');
@@ -315,13 +328,14 @@ class DebtorAccountsController extends Controller
                     throw new \RuntimeException('ยอดคงเหลือไม่ถูกต้อง');
                 }
 
+                $interestPaid = $hasPayments && isset($target['interest_paid']) ? $target['interest_paid'] : 0;
                 $installmentNo = (int) ($account->payments()->max('installment_no') ?? 0) + 1;
 
                 $transaction = new Transaction();
                 $transaction->tx_date = $request->payment_date;
                 $transaction->tx_type = 'income';
                 $transaction->payment_method = $request->payment_method;
-                $transaction->amount = $remaining;
+                $transaction->amount = $remaining + $interestPaid;
                 $transaction->description = 'ชำระลูกหนี้ (เต็มจำนวน)';
                 $transaction->related_type = 'debtor';
                 $transaction->related_id = $account->id;
@@ -333,12 +347,13 @@ class DebtorAccountsController extends Controller
                 $payment->transaction_id = $transaction->id;
                 $payment->installment_no = $installmentNo;
                 $payment->principal_paid = $remaining;
-                $payment->interest_paid = 0;
+                $payment->interest_paid = $interestPaid;
                 $payment->payment_date = $request->payment_date;
                 $payment->create_by = $this->getActorName();
                 $payment->save();
 
                 $account->principal_paid += $remaining;
+                $account->interest_paid += $interestPaid;
                 $account->status = 'paid';
                 $account->update_by = $this->getActorName();
                 $account->save();
