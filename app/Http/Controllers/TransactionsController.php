@@ -106,11 +106,27 @@ class TransactionsController extends Controller
 
     public function show($id)
     {
-        $transaction = Transaction::with(['category', 'items.productAttribute', 'debtorPayment', 'creditorPayment'])
+        $transaction = Transaction::with([
+                'category',
+                'items.productAttribute',
+                'debtorPayment',
+                'creditorPayment',
+            ])
             ->find($id);
 
         if (!$transaction) {
             return $this->returnErrorData('ไม่พบข้อมูลนี้', 404);
+        }
+
+        if ($transaction->related_type === 'debtor') {
+            $transaction->load('debtorAccount');
+            $transaction->setRelation('creditorAccount', null);
+        } elseif ($transaction->related_type === 'creditor') {
+            $transaction->load('creditorAccount');
+            $transaction->setRelation('debtorAccount', null);
+        } else {
+            $transaction->setRelation('debtorAccount', null);
+            $transaction->setRelation('creditorAccount', null);
         }
 
         return $this->returnSuccess('เรียกดูข้อมูลสำเร็จ', $transaction);
@@ -369,7 +385,13 @@ class TransactionsController extends Controller
         $paidAmount = $account->payments()->sum('paid_amount');
 
         $account->paid_amount = min($paidAmount, $account->credit_amount);
-        $account->status = $account->paid_amount >= $account->credit_amount ? 'paid' : 'unpaid';
+        if ($account->paid_amount >= $account->credit_amount) {
+            $account->status = 'paid';
+        } elseif ($account->paid_amount > 0) {
+            $account->status = 'partial';
+        } else {
+            $account->status = 'unpaid';
+        }
         $account->update_by = $this->getActorName();
         $account->save();
     }

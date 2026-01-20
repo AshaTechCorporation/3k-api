@@ -296,6 +296,7 @@ Route::post('/debtors/{id}/pay', [DebtorAccountsController::class, 'pay']);
 Route::post('/debtors/pay', [DebtorAccountsController::class, 'payBulk']);
 Route::post('/debtors_page', [DebtorAccountsController::class, 'getPage']);
 Route::get('/get_debtors', [DebtorAccountsController::class, 'getList']);
+Route::get('/debtors/{id}', [DebtorAccountsController::class, 'show']);
 
 // creditors
 Route::get('/creditors', [CreditorAccountsController::class, 'index']);
@@ -303,6 +304,7 @@ Route::post('/creditors', [CreditorAccountsController::class, 'store']);
 Route::post('/creditors/pay', [CreditorAccountsController::class, 'pay']);
 Route::post('/creditors_page', [CreditorAccountsController::class, 'getPage']);
 Route::get('/get_creditors', [CreditorAccountsController::class, 'getList']);
+Route::get('/creditors/{id}', [CreditorAccountsController::class, 'show']);
 
 Route::put('/update_password_user/{id}', [UserController::class, 'updatePasswordUser']);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

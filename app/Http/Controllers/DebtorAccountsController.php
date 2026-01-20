@@ -70,7 +70,7 @@ class DebtorAccountsController extends Controller
             'create_by',
         ];
 
-        $query = DebtorAccount::select($col);
+        $query = DebtorAccount::with(['payments.transaction'])->select($col);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -186,6 +186,17 @@ class DebtorAccountsController extends Controller
             DB::rollBack();
             return $this->returnErrorData('เกิดข้อผิดพลาด: ' . $e->getMessage(), 500);
         }
+    }
+
+    public function show($id)
+    {
+        $account = DebtorAccount::with(['payments.transaction'])->find($id);
+
+        if (!$account) {
+            return $this->returnErrorData('ไม่พบข้อมูลนี้', 404);
+        }
+
+        return $this->returnSuccess('เรียกดูข้อมูลสำเร็จ', $account);
     }
 
     public function pay(Request $request, $id)

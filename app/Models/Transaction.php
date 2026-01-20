@@ -18,6 +18,11 @@ class Transaction extends Model
         return $this->hasOne(DebtorPayment::class, 'transaction_id');
     }
 
+    public function debtorAccount()
+    {
+        return $this->belongsTo(DebtorAccount::class, 'related_id');
+    }
+
     public function category()
     {
         return $this->belongsTo(IncomeExpensesTrackerType::class, 'income_expenses_tracker_type_id');
@@ -31,5 +36,10 @@ class Transaction extends Model
     public function creditorPayment()
     {
         return $this->hasOne(CreditorPayment::class, 'transaction_id');
+    }
+
+    public function creditorAccount()
+    {
+        return $this->belongsTo(CreditorAccount::class, 'related_id');
     }
 }

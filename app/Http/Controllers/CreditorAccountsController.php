@@ -68,7 +68,7 @@ class CreditorAccountsController extends Controller
             'create_by',
         ];
 
-        $query = CreditorAccount::select($col);
+        $query = CreditorAccount::with(['payments.transaction'])->select($col);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -180,11 +180,25 @@ class CreditorAccountsController extends Controller
         }
     }
 
+    public function show($id)
+    {
+        $account = CreditorAccount::with(['payments.transaction'])->find($id);
+
+        if (!$account) {
+            return $this->returnErrorData('ไม่พบข้อมูลนี้', 404);
+        }
+
+        return $this->returnSuccess('เรียกดูข้อมูลสำเร็จ', $account);
+    }
+
     public function pay(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'creditor_account_ids' => 'required|array|min:1',
+            'creditor_account_ids' => 'nullable|array|min:1',
             'creditor_account_ids.*' => 'required|integer|exists:creditor_accounts,id',
+            'payments' => 'nullable|array|min:1',
+            'payments.*.creditor_account_id' => 'required_with:payments|integer|exists:creditor_accounts,id',
+            'payments.*.paid_amount' => 'required_with:payments|numeric|min:0.01',
             'paid_date' => 'required|date',
             'payment_method' => 'required|in:cash,transfer',
         ]);
@@ -196,9 +210,19 @@ class CreditorAccountsController extends Controller
         DB::beginTransaction();
 
         try {
+            $hasPayments = $request->filled('payments');
+            $hasAccountIds = $request->filled('creditor_account_ids');
+
+            if (!$hasPayments && !$hasAccountIds) {
+                return $this->returnErrorData('กรุณาระบุรายการที่ต้องการชำระ', 400);
+            }
+
             $results = [];
 
-            foreach ($request->creditor_account_ids as $accountId) {
+            $targets = $hasPayments ? $request->payments : $request->creditor_account_ids;
+
+            foreach ($targets as $target) {
+                $accountId = $hasPayments ? $target['creditor_account_id'] : $target;
                 $account = CreditorAccount::with('payments')->find($accountId);
                 if (!$account) {
                     throw new \RuntimeException('ไม่พบข้อมูลเจ้าหนี้');
@@ -213,11 +237,16 @@ class CreditorAccountsController extends Controller
                     throw new \RuntimeException('ยอดคงเหลือไม่ถูกต้อง');
                 }
 
+                $paidAmount = $hasPayments ? $target['paid_amount'] : $remaining;
+                if ($paidAmount > $remaining) {
+                    throw new \RuntimeException('ยอดชำระเกินยอดคงเหลือ');
+                }
+
                 $transaction = new Transaction();
                 $transaction->tx_date = $request->paid_date;
                 $transaction->tx_type = 'expense';
                 $transaction->payment_method = $request->payment_method;
-                $transaction->amount = $remaining;
+                $transaction->amount = $paidAmount;
                 $transaction->description = 'ชำระเจ้าหนี้';
                 $transaction->related_type = 'creditor';
                 $transaction->related_id = $account->id;
@@ -227,14 +256,20 @@ class CreditorAccountsController extends Controller
                 $payment = new CreditorPayment();
                 $payment->creditor_account_id = $account->id;
                 $payment->transaction_id = $transaction->id;
-                $payment->paid_amount = $remaining;
+                $payment->paid_amount = $paidAmount;
                 $payment->paid_date = $request->paid_date;
                 $payment->payment_method = $request->payment_method;
                 $payment->create_by = $this->getActorName();
                 $payment->save();
 
-                $account->paid_amount += $remaining;
-                $account->status = 'paid';
+                $account->paid_amount += $paidAmount;
+                if ($account->paid_amount >= $account->credit_amount) {
+                    $account->status = 'paid';
+                } elseif ($account->paid_amount > 0) {
+                    $account->status = 'partial';
+                } else {
+                    $account->status = 'unpaid';
+                }
                 $account->update_by = $this->getActorName();
                 $account->save();
 
