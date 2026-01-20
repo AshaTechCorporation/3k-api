@@ -130,6 +130,7 @@ class ReportsController extends Controller
             'status' => 'nullable|in:unpaid,partial,paid',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
+            'q' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -146,6 +147,9 @@ class ReportsController extends Controller
         }
         if ($request->filled('end_date')) {
             $baseQuery->whereDate('start_date', '<=', $request->end_date);
+        }
+        if ($request->filled('q')) {
+            $baseQuery->where('debtor_name', 'like', '%' . $request->q . '%');
         }
 
         $summaryQuery = clone $baseQuery;
@@ -181,6 +185,7 @@ class ReportsController extends Controller
             'status' => 'nullable|in:unpaid,partial,paid',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
+            'q' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -197,6 +202,9 @@ class ReportsController extends Controller
         }
         if ($request->filled('end_date')) {
             $baseQuery->whereDate('credit_date', '<=', $request->end_date);
+        }
+        if ($request->filled('q')) {
+            $baseQuery->where('vendor_name', 'like', '%' . $request->q . '%');
         }
 
         $summaryQuery = clone $baseQuery;

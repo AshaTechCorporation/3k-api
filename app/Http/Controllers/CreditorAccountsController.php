@@ -85,7 +85,7 @@ class CreditorAccountsController extends Controller
         if ($orderby[$order[0]['column']] ?? null) {
             $query->orderBy($orderby[$order[0]['column']], $order[0]['dir']);
         } else {
-            $query->orderBy('credit_date', 'desc');
+            $query->orderBy('created_at', 'desc')->orderBy('id', 'desc');
         }
 
         if (!empty($search['value'])) {
