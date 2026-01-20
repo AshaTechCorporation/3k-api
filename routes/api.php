@@ -50,6 +50,9 @@ use App\Http\Controllers\JobsController;
 use App\Http\Controllers\CheckListController;
 use App\Http\Controllers\IncomeExpensesTrackerTypeController;
 use App\Http\Controllers\IncomeExpensesTrackerController;
+use App\Http\Controllers\TransactionsController;
+use App\Http\Controllers\DebtorAccountsController;
+use App\Http\Controllers\CreditorAccountsController;
 use App\Http\Controllers\ArApController;
 use App\Http\Controllers\ProductAttributeTransController;
 use Illuminate\Support\Facades\Route;
@@ -278,6 +281,30 @@ Route::get('/get_income_expense_type', [IncomeExpensesTrackerTypeController::cla
 Route::resource('income_expense_tracker', IncomeExpensesTrackerController::class);
 Route::post('/income_expense_tracker_page', [IncomeExpensesTrackerController::class, 'getPage']);
 Route::get('/get_income_expense_tracker/{date}', [IncomeExpensesTrackerController::class, 'getList']);
+
+// transactions
+Route::post('/transactions', [TransactionsController::class, 'store']);
+Route::put('/transactions/{id}', [TransactionsController::class, 'update']);
+Route::post('/transactions_page', [TransactionsController::class, 'getPage']);
+Route::get('/get_transactions/{date?}', [TransactionsController::class, 'getList']);
+Route::get('/transactions/{id}', [TransactionsController::class, 'show']);
+
+// debtors
+Route::get('/debtors', [DebtorAccountsController::class, 'index']);
+Route::post('/debtors', [DebtorAccountsController::class, 'store']);
+Route::post('/debtors/{id}/pay', [DebtorAccountsController::class, 'pay']);
+Route::post('/debtors/pay', [DebtorAccountsController::class, 'payBulk']);
+Route::post('/debtors_page', [DebtorAccountsController::class, 'getPage']);
+Route::get('/get_debtors', [DebtorAccountsController::class, 'getList']);
+Route::get('/debtors/{id}', [DebtorAccountsController::class, 'show']);
+
+// creditors
+Route::get('/creditors', [CreditorAccountsController::class, 'index']);
+Route::post('/creditors', [CreditorAccountsController::class, 'store']);
+Route::post('/creditors/pay', [CreditorAccountsController::class, 'pay']);
+Route::post('/creditors_page', [CreditorAccountsController::class, 'getPage']);
+Route::get('/get_creditors', [CreditorAccountsController::class, 'getList']);
+Route::get('/creditors/{id}', [CreditorAccountsController::class, 'show']);
 
 Route::put('/update_password_user/{id}', [UserController::class, 'updatePasswordUser']);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
